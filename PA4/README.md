@@ -1,11 +1,11 @@
-Two Cube Manipulation PA3
+Obj Loader
 ========================================
 
 Building This Example
 ---------------------
 
 
-To build this example cd to p2 directory, then
+To build this example cd to p4 directory, then
 
 >$ cd build
 >$ make
@@ -22,27 +22,18 @@ Ensure that the latest version of the Developer Tools is installed.
 
 Running This Example
 ---------------------
-Navigate to the bin and run the matrix executable
+Navigate to line 32 and replace name with the model obj you want to load
 
-Right click in the window to access the menu and change rotation speed
+Place all obj files into bin
 
-Left click to change the rotation of the cube
-
-Press a to reverse the orbit
-
-Press escape or use the right click menu to quit
-
-Press left arrow to cause planet to orbit counter clockwise
-
-Press Right arrow to cause planet to orbit clockwise
-
-
-Extra Credit
----------------------
-Text indicates which way the planet is rotating and signals when planet is not rotating
-
+This Program has not been tested with multiple paths
 
 Known Bugs
 ---------------------
-Menu does not disable mouse presses I am *still* unsure how to fix this
-Very slight jump in changing rotation this has a lot to do with the top bug im having difficulty with
+The obj loader is incomplete, it loads three types of obj files
+but does not display them correctly It was to my understanding
+that vectors needed to be normalised, however I have found no 
+such tutorial as to which vectors should be normalised. 
+
+The table looks like a bunch of sticks
+

@@ -28,6 +28,8 @@ int w = 640, h = 480;// Window size
 GLuint program;// The GLSL program handle
 GLuint vbo_geometry;// VBO handle for our geometry
 
+//Input model name here
+char argument[128]="cube1.obj";
 
 
 //temp variables
@@ -75,7 +77,7 @@ int main(int argc, char **argv)
     glutInitWindowSize(w, h);
     // Name and create the Window
     glutCreateWindow("Matrix Example");
-
+	
     // Now that the window is created the GL context is fully set up
     // Because of that we can now initialize GLEW to prepare work with shaders
     GLenum status = glewInit();
@@ -201,12 +203,13 @@ ofstream fout;
                                std::vector< glm::vec3 > vertices;
 std::vector< glm::vec2 > uvs;
 std::vector< glm::vec3 > normals; // Won't be used at the moment.
-bool res = loadOBJ("dragon.obj", vertices, uvs, normals); 
+if( loadOBJ(argument, vertices, uvs, normals))
+{
     // Create a Vertex Buffer object to store this vertex info on the GPU
     glGenBuffers(1, &vbo_geometry);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
-
+}
     //--Geometry done
 
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -339,15 +342,13 @@ std::vector< glm::vec2 > temp_uvs;
 std::vector< glm::vec3 > temp_normals;
 
 	FILE * file = fopen(path, "r");
-	FILE * file2;
 	ofstream fout("test.txt");
 	char* test=new char [128];
 
 
 
 	bool cont=true;
-	int red;
-	unsigned int Index;
+
 		if( file == NULL )
 			{
 				printf("Impossible to open the file !\n");
@@ -400,7 +401,7 @@ std::vector< glm::vec3 > temp_normals;
 					
 				fscanf(file,"%d\n",&vertexIndex[0]);
 					
-				file2=file;
+				
 				//LOOK AHEAD A BIT
 				
 				test=fgets(test, 3,file);
@@ -423,7 +424,7 @@ std::vector< glm::vec3 > temp_normals;
     			 		 
 				}
 				else if((test[0]== '/')&&strcmp(test, "//") != 0)
-				{
+				{fout<<test<<' ';
 				
 				 fscanf(file, "/%d/%d %d/%d/%d %d/%d/%d\n", &uvIndex[0], &normalIndex[0], 
 				 &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], 
@@ -440,6 +441,7 @@ std::vector< glm::vec3 > temp_normals;
 				}
 				else
 				{
+fout<<test<<' ';
 				 fscanf(file,"%d %d\n",&vertexIndex[1],&vertexIndex[2]);
 				}
 				
