@@ -1,11 +1,11 @@
-Obj Loader
+Cube Manipulation PA2
 ========================================
 
 Building This Example
 ---------------------
 
 
-To build this example cd to p4 directory, then
+To build this example cd to p2 directory, then
 
 >$ cd build
 >$ make
@@ -22,18 +22,17 @@ Ensure that the latest version of the Developer Tools is installed.
 
 Running This Example
 ---------------------
-Navigate to line 32 and replace name with the model obj you want to load
+Navigate to the bin and run the matrix executable
 
-Place all obj files into bin
+Right click in the window to access the menu and change rotation speed
 
-This Program has not been tested with multiple paths
+Left click to change the rotation of the cube
+
+Press a to reverse the orbit
+
+Press escape or use the right click menu to quit
+
 
 Known Bugs
 ---------------------
-The obj loader is incomplete, it loads three types of obj files
-but does not display them correctly It was to my understanding
-that vectors needed to be normalised, however I have found no 
-such tutorial as to which vectors should be normalised. 
-
-The table looks like a bunch of sticks
-
+Menu does not disable mouse presses I am unsure how to fix this

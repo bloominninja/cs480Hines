@@ -17,9 +17,11 @@ const char * Shader::load(string file)
 
  
     fstream fin;
+    ofstream fout;
     string i1,hold;
     hold.clear();
     fin.clear();
+    fout.open("test1.txt");
 
 
     fin.open(file);
@@ -34,7 +36,8 @@ fin.clear();
     fin.close();
 
    // vs=new char [i1.size()+1]; 
-
+    fout<<hold.c_str();
+fout.close();
 
     return hold.c_str();
 
