@@ -32,9 +32,10 @@ int w = 640, h = 480;// Window size
 GLuint program;// The GLSL program handle
 GLuint vbo_geometry;// VBO handle for our geometry
 
+std::vector< glm::vec3 > vertices;
 
-//Input model name here
-char argument[128]="table.obj";
+//Set file path here
+char argument[128]="../models/";
 
 
 Assimp::Importer importer;
@@ -65,7 +66,7 @@ void reshape(int n_w, int n_h);
 void keyboard(unsigned char key, int x_pos, int y_pos);
 void mouse(int button, int state,int x, int y);
 
-bool loadOBJ(const char * path,std::vector < glm::vec3 > & out_vertices);
+bool loadOBJ( const char * path,std::vector < glm::vec3 > & out_vertices);
 //Menu Functions
 void menu(int number);
 void options();
@@ -83,11 +84,23 @@ std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
 int main(int argc, char **argv)
 {
     // Initialize glut
+   ifstream fin;
+	strcat(argument,argv[1]);
+	cout<<argument;
+	fin.open(argument);
+	if(fin.good())
+	{
+	cout<<"fine";
+	}
+	else
+	{
+	strcpy(argument,"../models/dragon.obj");
+	}
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(w, h);
     // Name and create the Window
-    glutCreateWindow("SUPER AWESOME CUBE MANIPULLITOR 2.09TOUSEN!");
+    glutCreateWindow("SUPER AWESOME MODALLUUU LOAAAAAADER!");
 
     // Now that the window is created the GL context is fully set up
     // Because of that we can now initialize GLEW to prepare work with shaders
@@ -138,15 +151,15 @@ void render()
     glUniformMatrix4fv(loc_mvpmat, 1, GL_FALSE, glm::value_ptr(mvp));
 
     //set up the Vertex Buffer Object so it can be drawn
-    glEnableVertexAttribArray(loc_position);
+    glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(loc_color);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
     //set pointers into the vbo for each of the attributes(position and color)
-    glVertexAttribPointer( loc_position,//location of attribute
+    glVertexAttribPointer( 0,//location of attribute
                            3,//number of elements
                            GL_FLOAT,//type
                            GL_FALSE,//normalized?
-                           sizeof(Vertex),//stride
+                           0,//stride
                            0);//offset
 
     glVertexAttribPointer( loc_color,
@@ -156,7 +169,7 @@ void render()
                            sizeof(Vertex),
                            (void*)offsetof(Vertex,color));
 
-    glDrawArrays(GL_TRIANGLES, 0, 36);//mode, starting index, count
+    glDrawArrays(GL_TRIANGLES, 0, vertices.size());//mode, starting index, count
 
     //clean up
     glDisableVertexAttribArray(loc_position);
@@ -256,65 +269,18 @@ bool initialize()
 Shader nexus;
 ofstream fout;
 
-std::vector< glm::vec3 > vertices;
+
 
 loadOBJ(argument,vertices);
 
 
     //this defines a cube, this is why a model loader is nice
     //you can also do this with a draw elements and indices, try to get that working
-    Vertex geometry[] = { {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
 
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-                          
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}}
-                        };
     // Create a Vertex Buffer object to store this vertex info on the GPU
     glGenBuffers(1, &vbo_geometry);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
-   glBufferData(GL_ARRAY_BUFFER, vertices.size() * 24, &vertices[0], GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm :: vec3), &vertices[0], GL_STATIC_DRAW);
 
     //--Geometry done
 
@@ -370,7 +336,7 @@ fout.close();
     if(!shader_status)
     {
         std::cerr << "[F] THE SHADER PROGRAM FAILED TO LINK" << std::endl;
-        //return false;
+        return false;
     }
 
     //Now we set the locations of the attributes and uniforms
@@ -380,7 +346,7 @@ fout.close();
     if(loc_position == -1)
     {
         std::cerr << "[F] POSITION NOT FOUND" << std::endl;
-        //return false;
+        return false;
     }
 
     loc_color = glGetAttribLocation(program,
@@ -388,7 +354,7 @@ fout.close();
     if(loc_color == -1)
     {
         std::cerr << "[F] V_COLOR NOT FOUND" << std::endl;
-        //return false;
+        return false;
     }
 
     loc_mvpmat = glGetUniformLocation(program,
@@ -396,7 +362,7 @@ fout.close();
     if(loc_mvpmat == -1)
     {
         std::cerr << "[F] MVPMATRIX NOT FOUND" << std::endl;
-        //return false;
+        return false;
     }
     
     //--Init the view and projection matrices
@@ -507,18 +473,18 @@ out_vertices.clear();
 		for(int z=0; z<3; z++)
 			{
 		 tmpVert.x=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].x;
-		 cout<<tmpVert.x;
+		 //cout<<tmpVert.x;
 		 tmpVert.y=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].y;
-		 cout<<' '<<tmpVert.y;
+		 //cout<<' '<<tmpVert.y;
 		 tmpVert.z=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].z;
 		out_vertices.push_back(tmpVert);
-			cout<<' '<<tmpVert.z;
+			//cout<<' '<<tmpVert.z;
 
 			
 
 		
 			}
-			cout<<endl;
+		
 		}
 
 

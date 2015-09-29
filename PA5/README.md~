@@ -44,5 +44,3 @@ Known Bugs/fixes
 Some obj files fail to compile the fragment shader (sphere.obj), placing the obj in bin and modifying line 38 
 to read "" allows obj files to load properly
 
-Working off the old PA2, stopping and rotating the model is not seamless
-
