@@ -1,6 +1,6 @@
 # Linux
 CC=g++
-LIBS= -lglut -lGLEW -lGL -lassimp
+LIBS= -lglut -lGLEW -lGL -lassimp -lmagick++
 
 # For Macs uncomment the next line and comment out the previous one
 #CC=clang++
@@ -13,7 +13,8 @@ CXXFLAGS= -g -Wall -std=c++0x
 all: ../bin/Matrix
 
 ../bin/Matrix: ../src/main.cpp
-	$(CC) $(CXXFLAGS) ../src/main.cpp -o ../bin/AssimpLoader $(LIBS)
+	$(CC) $(CXXFLAGS) ../src/main.cpp -o ../bin/TextureLoader $(LIBS)
 
 clean:
-	rm -rf *.o ../bin/AssimpLoader
+	rm -rf *.o ../bin/TextureLoader
+
