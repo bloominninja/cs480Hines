@@ -1,15 +1,29 @@
+/*
+CS 480 Texture loading assignment by Gregory Stayner and Bryan Hines
+
+
+
+*/
 #define GLM_FORCE_RADIANS
-#include <GL/glew.h> // glew must be included before the main gl libs
-#include <GL/glut.h> // doing otherwise causes compiler shouting
+/*  Can't get includes right, dunno if it's an issue with the installation or me just
+picking the wrong files.
+#include "/usr/include/ImageMagick-6/Magick++/Include.h"    // Include header for ImageMagick
+#include "/usr/include/ImageMagick-6/Magick++/Functions.h"
+#include "/usr/include/ImageMagick-6/Magick++/Image.h"
+#include "/usr/include/ImageMagick-6/Magick++/Pixels.h"
+#include "/usr/include/ImageMagick-6/Magick++/ResourceLimits.h"
+#include "/usr/include/ImageMagick-6/Magick++/STL.h"
+*/
+#include <Magick++.h>
+#include <GL/glew.h>        // glew must be included before the main gl libs
+#include <GL/glut.h>        // doing otherwise causes compiler shouting
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <stdio.h>// for file and extended functuality with file 
+#include <stdio.h>          // for file and extended functionality with file 
 #include <chrono>
-
-#include <vector>// Included for dynamic upload
 using namespace std;
-
+#include <vector>           // Included for dynamic upload
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> //Makes passing matrices to shaders easier
@@ -18,6 +32,7 @@ using namespace std;
 #include "shader.cpp"
 #include <assimp/postprocess.h>
 #include <assimp/color4.h>
+//#include <-I/usr/include/GraphicsMagick>     
 
 //--Data types
 //This object will define the attributes of a vertex(position, color, etc...)
@@ -32,6 +47,8 @@ struct Vertex
 int w = 640, h = 480;// Window size
 GLuint program;// The GLSL program handle
 GLuint vbo_geometry;// VBO handle for our geometry
+GLuint vbo_texture;
+GLuint samplerVar;
 
 std::vector< Vertex > vertices;
 
@@ -40,9 +57,7 @@ GLint loc_mvpmat;// Location of the modelviewprojection matrix in the shader
 
 //attribute locations
 GLint loc_position;
-
-///Temperarily disabled for Vertex Modification
-//GLint loc_color;
+GLint loc_texture;
 
 //transform matrices
 glm::mat4 model;//obj->world each object should have its own model matrix
@@ -70,7 +85,7 @@ void menu(int number);
 void options();
 
 //--Resource management
-bool initialize(char* fName);
+bool initialize(char* fName, char* tName);
 void cleanUp();
 
 //--Random time things
@@ -87,7 +102,7 @@ int main(int argc, char **argv)
         // File path variable
     char argument[128]="";
 
-    // Find file specified by command line argument.
+    // Find files specified by command line argument.
     ifstream fin;
     strcat(argument,argv[1]);
     cout << argv[1];
@@ -98,10 +113,23 @@ int main(int argc, char **argv)
         }
     else
         {
-        strcpy(argument,"dragon.obj");
+        strcpy(argument,"capsule.obj");
         }
     
     fin.close();
+    fin.open(argv[2]);
+    cout << argv[2];
+    
+    // Check if texture file exists
+    if(fin.good())
+        {
+        cout<< " located." << endl;
+        }
+    else
+        {
+        strcpy(argument,"capsule0.jpg");
+        }
+    
     
     // Initialize GLUT.
     glutInit(&argc, argv);
@@ -128,7 +156,7 @@ int main(int argc, char **argv)
     glutMouseFunc(mouse);
     
     // Initialize all of our resources(shaders, geometry)
-    bool init = initialize(argument);
+    bool init = initialize(argv[1], argv[2]);
     if(init)
         {
         t1 = std::chrono::high_resolution_clock::now();
@@ -156,6 +184,10 @@ void render()
     //enable the shader program
     glUseProgram(program);
     
+    // Get the location of the sampler variable from the shader program.
+    samplerVar = glGetUniformLocation(program, "texSampler");
+    glUniform1i(samplerVar, 0);
+    
     //upload the matrix to the shader
     glUniformMatrix4fv(loc_mvpmat, 1, GL_FALSE, glm::value_ptr(mvp));
     
@@ -163,7 +195,8 @@ void render()
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
-    //set pointers into the vbo for each of the attributes(position and color)
+    
+    //set pointers into the vbo for each of the attributes(position and texture)
     glVertexAttribPointer( 0,//location of attribute
                            3,//number of elements
                            GL_FLOAT,//type
@@ -171,35 +204,25 @@ void render()
                            sizeof(struct Vertex),//stride
                            0);//offset
     
+    // Set attribute pointer for the texture coordinates.
+        // offset here is potential trouble
     glVertexAttribPointer( 1,
                            3,
                            GL_FLOAT,
                            GL_FALSE,
                            sizeof(struct Vertex),
-                           0);
-    
-/*    // Set material properties.  This code didn't work.
-    glm::vec3* amb = new glm::vec3(1.0, 1.0, 1.0);
-    glm::vec3* dif = new glm::vec3(0.001149, 0.002974, 0.250000);
-    glm::vec3* spc = new glm::vec3(0.046403, 0.046950, 0.500000);
-    
-    glMaterialfv(GL_FRONT, GL_AMBIENT, glm::value_ptr(amb));
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, glm::value_ptr(dif));
-    glMaterialfv(GL_FRONT, GL_SPECULAR, glm::value_ptr(spc));
-//    void glMaterialfv(GL_FRONT, GL_EMISSION, TYPE *param);
-    glMaterialf(GL_FRONT, GL_SHININESS, 17.647059);
-*/    
-/*  // Nope, this didn't work either.  
-    // Set the color
-    glVertexAttrib3f(loc_color, 0.2f, 0.2f, 0.8f);
-*/        
+                           (const GLvoid*)sizeof(Vertex.position)); 
 
-
+    // Turn on the loaded texture.    
+    glActiveTexture(TextureUnit);
+    glBindTexture(m_textureTarget, m_textureObj);    
+    
+    
     glDrawArrays(GL_TRIANGLES, 0, vertices.size());//mode, starting index, count
     
     //clean up
     glDisableVertexAttribArray(loc_position);
-    //glDisableVertexAttribArray(loc_color);
+    glDisableVertexAttribArray(loc_texture);
                            
     //swap the buffers
     glutSwapBuffers();
@@ -258,6 +281,7 @@ void update()
                             glm::vec3(x_point, y_point, z_point))*glm::rotate(glm::mat4(1.0f),
                             rangle*spini, 
                             glm::vec3(0.0, 1.0, 0.0 ));
+
 */
     
     // Rotate the model relatively slowly so we can show off how pretty it is.
@@ -301,7 +325,7 @@ void mouse(int button, int state,int x, int y)
         }
     }
 
-bool initialize(char* fName)
+bool initialize(char* fName, char* tName) // Names of the object file and texture to be loaded.
     {
     // Initialize basic geometry and shaders for this example
     Shader nexus,nexus2;
@@ -310,7 +334,13 @@ bool initialize(char* fName)
     // to string and made a temporary character array to handle the shader code.
     string shaderCode;
     const char* tmp=new char[500];
-    char* pass;
+    
+    // Texture variables
+    Magick::Image textureImage(tName);
+    Magick::Blob pixels;
+    texture.write(pixels, "RGBA");
+    
+    //char* pass;
     // Load the specified model.
     loadOBJ(fName,vertices);
     
@@ -318,6 +348,16 @@ bool initialize(char* fName)
     glGenBuffers(1, &vbo_geometry);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices.front(), GL_STATIC_DRAW);
+    
+    // Create an object to hold the textures
+    glGenTexture(1, &vbo_texture);
+    glBindTexture(GL_TEXTURE_2D, vbo_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureImage->columns(), textureImage->rows(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    
+    // Set filtering parameteres
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);    
+    
     
     //--Geometry done
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -329,8 +369,11 @@ bool initialize(char* fName)
     GLint shader_status;
     
     // Load the Vertex shader, and extract the text from the string object.
+    //nexus.output=true;
 
-    pass=new char [190];
+    //pass=new char [190];
+
+/* ### Didn't get updated shader.cpp, so have to comment all this stuff out.
 unsigned int len;
 
 //Give a maximum number of attempts to load the vertex shader 
@@ -349,28 +392,25 @@ strcpy(pass,shaderCode.c_str());
 attempts-=1;
 }
 while(len!=strlen(pass)&& attempts>0);
+ cout<<1000-attempts;
 
+*/
 //Pass the temperary variable to a pointer
-    tmp = pass;
+//    tmp = pass;
 
+    // Load the Vertex shader, and extract the text from the string object.
+        // Using the loading code from PA5 for now.
+    shaderCode = nexus.load("vs.txt");
+    tmp = shaderCode.c_str();
+    
     glShaderSource(vertex_shader, 1, &tmp, NULL);
     glCompileShader(vertex_shader);
     
     //check the compile status
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &shader_status);
 
-/*  // Old shader error messages.  Delete?
-    if(!shader_status)
-        {
-        std::cerr << "[F] FAILED TO COMPILE VERTEX SHADER!" << std::endl;
-        return false;
-        }
-*/    
-    
     // If there were errors compiling the shader, print information
         // code block taken from ogldev tutorial 4
-
-
     if (!shader_status) 
         {
         GLchar InfoLog[1024];
@@ -380,7 +420,7 @@ while(len!=strlen(pass)&& attempts>0);
     
     // Get rid of vertex shader code; load fragment shader and extract text.
     shaderCode.clear();
-nexus.output=false;
+//nexus.output=false;
     shaderCode = nexus.load("fs.txt");
     tmp = shaderCode.c_str();
     
@@ -390,14 +430,7 @@ nexus.output=false;
 
     //check the compile status
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &shader_status);
-
-/*  // Old shader compilation error code.
-    if(!shader_status)
-        {
-        std::cerr << "[F] FAILED TO COMPILE FRAGMENT SHADER!" << std::endl;
-        return false;
-        }
-*/
+    
     // If there were errors compiling the shader, print information
         // code block taken from ogldev tutorial 4
     if (!shader_status) 
@@ -435,15 +468,15 @@ nexus.output=false;
         return false;
         }
 
-    //loc_color = glGetAttribLocation(program,
-                 //   const_cast<const char*>("v_color"));
-/*
-    if(loc_color == -1)
+    loc_texture = glGetAttribLocation(program,
+                    const_cast<const char*>("v_texture"));
+
+    if(loc_texture == -1)
         {
-        std::cerr << "[F] V_COLOR NOT FOUND" << std::endl;
+        std::cerr << "[F] TEXTURE NOT FOUND" << std::endl;
         return false;
         }
-*/
+
     loc_mvpmat = glGetUniformLocation(program,
                     const_cast<const char*>("mvpMatrix"));
 
@@ -509,7 +542,9 @@ void menu(int number)
     {
     if (number==0)
         {
-        exit(0);
+        //exit(0);
+        // Try this to see if it solves the seg fault on exit problem
+        glutLeaveMainLoop();
         }
     else if(number==1)
         {
@@ -549,47 +584,40 @@ bool loadOBJ(const char * path,std::vector < Vertex > & out_vertices)
     Vertex tmpVert;
     const aiScene *myScene = importer.ReadFile(path, aiProcess_Triangulate);
     unsigned int mNumFaces;
-
-    // variables tried while troubleshooting, but weren't needed.  Delete them?
-        //unsigned int mNumMeshes;
-        //unsigned int *mIndices;
-        //unsigned int mNumIndices=3; 
-        //aiMesh **mMeshes;
-        //aiFace *mFaces;
-        //aiVector3D *mVertices;
-        //mNumMeshes=myScene->mNumMeshes;
-        //mMeshes=myScene->mMeshes;
-    
     
     mNumFaces = myScene->mMeshes[0]->mNumFaces;
     out_vertices.clear();
-
-
 
 	for(unsigned int x=0; x<(mNumFaces);x++)
 		{
 		for(int z=0; z<3; z++)
 			{
-		    tmpVert.position[0]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].x;          
-          tmpVert.position[1]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].y;
-          tmpVert.position[2]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].z;
+		    tmpVert.position[0]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->
+                                            mFaces[x].mIndices[z]].x;
+            tmpVert.position[1]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->
+                                            mFaces[x].mIndices[z]].y;
+            tmpVert.position[2]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->
+                                            mFaces[x].mIndices[z]].z;
 
-				if(myScene->mMeshes[0]->HasTextureCoords(0/* Change with num meshes*/ ))
-					{
-					 tmpVert.uv[0]=myScene->mMeshes[0]->mTextureCoords[0][myScene->mMeshes[0]->mFaces[x].mIndices[z]].x;
-					 tmpVert.uv[1]=myScene->mMeshes[0]->mTextureCoords[0][myScene->mMeshes[0]->mFaces[x].mIndices[z]].y;
-					}
-				else
-					{
-					 tmpVert.uv[0]=0;
-					 tmpVert.uv[1]=0;
-					}
+            if(myScene->mMeshes[0]->HasTextures())
+                {
+                tmpVert.uv[0]=myScene->mMeshes[0]->mTextureCoords[0][myScene->mMeshes[0]->
+                                    mFaces[x].mIndices[z]].x;
+                tmpVert.uv[1]=myScene->mMeshes[0]->mTextureCoords[0][myScene->mMeshes[0]->
+                                    mFaces[x].mIndices[z]].y;                
+                }
+            
+            else
+                {
+                tmpVert.uv[0]=0;
+                tmpVert.uv[1]=0;
+                }
 
-				out_vertices.push_back(tmpVert);
+
+            out_vertices.push_back(tmpVert);
 
             }
 		}
 
-      
     return true;
     }
