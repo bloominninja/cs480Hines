@@ -6,6 +6,7 @@
 #include <string>
 #include <stdio.h>// for file and extended functuality with file 
 #include <chrono>
+
 #include <vector>// Included for dynamic upload
 using namespace std;
 
@@ -23,7 +24,7 @@ using namespace std;
 struct Vertex
     {
     GLfloat position[3];
-    GLfloat color[3];
+    GLfloat uv[2];
     };
 
 //--Evil Global variables
@@ -39,7 +40,9 @@ GLint loc_mvpmat;// Location of the modelviewprojection matrix in the shader
 
 //attribute locations
 GLint loc_position;
-GLint loc_color;
+
+///Temperarily disabled for Vertex Modification
+//GLint loc_color;
 
 //transform matrices
 glm::mat4 model;//obj->world each object should have its own model matrix
@@ -196,7 +199,7 @@ void render()
     
     //clean up
     glDisableVertexAttribArray(loc_position);
-    glDisableVertexAttribArray(loc_color);
+    //glDisableVertexAttribArray(loc_color);
                            
     //swap the buffers
     glutSwapBuffers();
@@ -255,7 +258,6 @@ void update()
                             glm::vec3(x_point, y_point, z_point))*glm::rotate(glm::mat4(1.0f),
                             rangle*spini, 
                             glm::vec3(0.0, 1.0, 0.0 ));
-
 */
     
     // Rotate the model relatively slowly so we can show off how pretty it is.
@@ -302,13 +304,13 @@ void mouse(int button, int state,int x, int y)
 bool initialize(char* fName)
     {
     // Initialize basic geometry and shaders for this example
-    Shader nexus;
+    Shader nexus,nexus2;
     ofstream fout;
     // There was some weirdness going on with the shader loaders, so I changed the return type
     // to string and made a temporary character array to handle the shader code.
     string shaderCode;
-    const char* tmp;
-    
+    const char* tmp=new char[500];
+    char* pass;
     // Load the specified model.
     loadOBJ(fName,vertices);
     
@@ -322,14 +324,35 @@ bool initialize(char* fName)
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     
     
+
     //compile the shaders
     GLint shader_status;
     
     // Load the Vertex shader, and extract the text from the string object.
-    shaderCode = nexus.load("vs.txt");
-    tmp = shaderCode.c_str();
-    
-    // Vertex shader first
+
+    pass=new char [190];
+unsigned int len;
+
+//Give a maximum number of attempts to load the vertex shader 
+int attempts=10;
+//Load tge vertex shader
+do
+{
+
+nexus.load("vs.txt");
+
+shaderCode = nexus.hold.c_str();
+len=nexus.length;
+strcpy(pass,shaderCode.c_str());
+
+
+attempts-=1;
+}
+while(len!=strlen(pass)&& attempts>0);
+
+//Pass the temperary variable to a pointer
+    tmp = pass;
+
     glShaderSource(vertex_shader, 1, &tmp, NULL);
     glCompileShader(vertex_shader);
     
@@ -346,15 +369,18 @@ bool initialize(char* fName)
     
     // If there were errors compiling the shader, print information
         // code block taken from ogldev tutorial 4
+
+
     if (!shader_status) 
         {
         GLchar InfoLog[1024];
         glGetShaderInfoLog(vertex_shader, sizeof(InfoLog), NULL, InfoLog);
-        fprintf(stderr, "Error compiling shader type %d: '%s'\n", vertex_shader, InfoLog);
+        fprintf(stderr, "Vertex Shader %d: '%s'\n", vertex_shader, InfoLog);
         }
     
     // Get rid of vertex shader code; load fragment shader and extract text.
     shaderCode.clear();
+nexus.output=false;
     shaderCode = nexus.load("fs.txt");
     tmp = shaderCode.c_str();
     
@@ -378,7 +404,7 @@ bool initialize(char* fName)
         {
         GLchar InfoLog[1024];
         glGetShaderInfoLog(fragment_shader, sizeof(InfoLog), NULL, InfoLog);
-        fprintf(stderr, "Error compiling shader type %d: '%s'\n", fragment_shader, InfoLog);
+        fprintf(stderr, "Fragment Shader %d: '%s'\n", fragment_shader, InfoLog);
         }
     
     shaderCode.clear();
@@ -409,15 +435,15 @@ bool initialize(char* fName)
         return false;
         }
 
-    loc_color = glGetAttribLocation(program,
-                    const_cast<const char*>("v_color"));
-
+    //loc_color = glGetAttribLocation(program,
+                 //   const_cast<const char*>("v_color"));
+/*
     if(loc_color == -1)
         {
         std::cerr << "[F] V_COLOR NOT FOUND" << std::endl;
         return false;
         }
-
+*/
     loc_mvpmat = glGetUniformLocation(program,
                     const_cast<const char*>("mvpMatrix"));
 
@@ -523,7 +549,7 @@ bool loadOBJ(const char * path,std::vector < Vertex > & out_vertices)
     Vertex tmpVert;
     const aiScene *myScene = importer.ReadFile(path, aiProcess_Triangulate);
     unsigned int mNumFaces;
-    
+
     // variables tried while troubleshooting, but weren't needed.  Delete them?
         //unsigned int mNumMeshes;
         //unsigned int *mIndices;
@@ -537,25 +563,33 @@ bool loadOBJ(const char * path,std::vector < Vertex > & out_vertices)
     
     mNumFaces = myScene->mMeshes[0]->mNumFaces;
     out_vertices.clear();
+
+
+
 	for(unsigned int x=0; x<(mNumFaces);x++)
 		{
 		for(int z=0; z<3; z++)
 			{
-		    tmpVert.position[0]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].x;
-           // cout<<tmpVert.position[0];
-           
-            tmpVert.position[1]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].y;
-           // cout<<' '<<tmpVert.position[1];
-            tmpVert.position[2]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].z;
-      tmpVert.color[0]=1;
-      tmpVert.color[1]=1;
-      tmpVert.color[2]=1;
-out_vertices.push_back(tmpVert);
-            //cout<<' '<<tmpVert.position[2];
-//cout<<endl;
+		    tmpVert.position[0]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].x;          
+          tmpVert.position[1]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].y;
+          tmpVert.position[2]=myScene->mMeshes[0]->mVertices[myScene->mMeshes[0]->mFaces[x].mIndices[z]].z;
+
+				if(myScene->mMeshes[0]->HasTextureCoords(0/* Change with num meshes*/ ))
+					{
+					 tmpVert.uv[0]=myScene->mMeshes[0]->mTextureCoords[0][myScene->mMeshes[0]->mFaces[x].mIndices[z]].x;
+					 tmpVert.uv[1]=myScene->mMeshes[0]->mTextureCoords[0][myScene->mMeshes[0]->mFaces[x].mIndices[z]].y;
+					}
+				else
+					{
+					 tmpVert.uv[0]=0;
+					 tmpVert.uv[1]=0;
+					}
+
+				out_vertices.push_back(tmpVert);
+
             }
 		}
+
       
     return true;
     }
-
