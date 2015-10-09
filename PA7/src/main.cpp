@@ -38,8 +38,10 @@ struct Geometry
 struct Satilite
 {
 	glm::mat4 Model;
+	int index;
 	float scale;
 	float distance;
+	float orbit_speed;
 	float rotation;
 };
 
@@ -75,7 +77,7 @@ int total=0;
 const int maxi = 10;
 
 Planet earth;
-
+Planet System[10];
 //transform matrices
 glm::mat4 model[maxi];//obj->world each object should have its own model matrix
 glm::mat4 view;//world->eye
@@ -84,7 +86,7 @@ glm::mat4 mvp[maxi];//premultiplied modelviewprojection
 glm::mat4 hold;
 
 //Camera Controlls
-glm::vec3 Position= glm::vec3 (0.0, 16.0, -64.0);
+glm::vec3 Position= glm::vec3 (0.0, 8.0, -16.0);
 glm::vec3 From_Pos= glm::vec3 (0.0, 0.0, 0.0);
 glm::vec3 Look_At = glm::vec3(0.0, 0.0, 0.0);
 glm::vec3 From_Angle= glm::vec3(0.0, 1.0, 0.0);
@@ -115,8 +117,9 @@ void addModel(int geometryIndex,int& modelIndex, glm::mat4& set);
 
 bool loadOBJ( const char * path,std::vector < Vertex > & out_vertices);
 void Orbit_Planet(Planet&planet, float dt);
-void Orbit_Moon(Satilite&moon, float dt, glm::mat4 transist);
-
+void Orbit_Moon(Satilite&moon, float dt, glm::mat4 transist, glm::mat4 scale);
+void LoadSystem(char* name);
+void LoadObject(fstream &pointer, Satilite& Data);
 
 //void printtext(int x, int y, string String); 
 
@@ -188,7 +191,7 @@ int main(int argc, char **argv)
         glutMainLoop();
         }
     
-    
+
     // Clean up after ourselves
     cleanUp();
     return 0;
@@ -208,10 +211,11 @@ void render()
     addModel(1,ind,earth.moons[0].Model);
      addModel(1,ind,model[0]);
     earth.Data.distance=5.0;
-    earth.Data.scale=.5;
+    earth.Data.scale=1;
     earth.Moon_Number=1;
-    earth.moons[0].scale=.25;
+    earth.moons[0].scale=.5;
     earth.moons[0].distance=10;
+
 
     //clean up
     glDisableVertexAttribArray(loc_position);
@@ -440,7 +444,8 @@ std::vector< Vertex > vertices;
                           {{-1.0, 1.0, 1.0}, {0.0, 0.0}},
                           {{1.0, -1.0, 1.0}, {0.0, 0.0}}
                         };
-                        
+                                LoadSystem("t.txt");
+                                   
     // Create a Vertex Buffer object to store this vertex info on the GPU
     glGenBuffers(1, &Geo[1].vbo_geometry);
     glBindBuffer(GL_ARRAY_BUFFER, Geo[1].vbo_geometry); 
@@ -449,6 +454,7 @@ std::vector< Vertex > vertices;
    glGenBuffers(1, &Geo[2].vbo_geometry);
    glBindBuffer(GL_ARRAY_BUFFER, Geo[2].vbo_geometry);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices.front(), GL_STATIC_DRAW);
+
 
 // test
 ////test over
@@ -664,7 +670,7 @@ void addModel(int geometryIndex,int& modelIndex, glm::mat4& set)
                            0);//offset
 
     glVertexAttribPointer( loc_color,
-                           3,
+                           2,
                            GL_FLOAT,
                            GL_FALSE,
                            sizeof(Vertex),
@@ -732,8 +738,8 @@ void UpdateCamera(float dt, float xMod, float yMod, float zMod)
 
 	if(!finished)
 	 {
-		if(Operate(From_Pos.y, Position.y, dt, 1),Operate(From_Pos.y, Position.y, dt, 1.9),
-		Operate(From_Pos.z, Position.z, dt, 1.9))
+		if(Operate(From_Pos.y, Position.y, dt, 1),Operate(From_Pos.y, Position.y, dt, 1),
+		Operate(From_Pos.z, Position.z, dt, .5))
 		{
 		 finished=true;
 		}
@@ -788,6 +794,7 @@ void Orbit_Planet(Planet& planet, float dt)
 {
 glm::mat4 test;
 glm::mat4 cam;
+glm::mat4 scale;
 float x_point;
 float y_point;
 float z_point;
@@ -803,32 +810,90 @@ z_point=planet.Data.distance * cos(tangle);
 //Orbit_Planet(earth,dt);
 
     test = glm::translate( glm::mat4(1.0f), glm::vec3(x_point, y_point, z_point));
-    test *= glm::scale( glm::mat4(1.0f), glm::vec3(planet.Data.scale,planet.Data.scale,planet.Data.scale));
+    
 	 cam=glm::translate( glm::mat4(1.0f), glm::vec3(x_point, y_point, z_point))* glm::translate( glm::mat4(1.0f), glm::vec3(x_point*2, y_point, 2*z_point));
     planet.Data.Model=test;
     //earth.Data.Model*=glm::rotate(glm::mat4(1.0f),angle, glm::vec3(0.0, 1.0, 0.0 ));
 
  planet.Data.Model*=glm::rotate(glm::mat4(1.0f),tangle, glm::vec3(0.0, 1.0, 0.0 ));
+ scale=glm::scale( glm::mat4(1.0f), glm::vec3(planet.Data.scale, planet.Data.scale, planet.Data.scale));
+ planet.Data.Model*=scale;
+ //test*=glm::scale( glm::mat4(1.0f), glm::vec3(planet.Data.scale, planet.Data.scale, planet.Data.scale));
   //cam*=glm::rotate(glm::mat4(1.0f),tangle, glm::vec3(0, 0, 1 ));  
 
   //          view = glm::lookAt(glm::vec3(cam[3].x,cam[3].y+7,cam[3].z) ,glm::vec3(0,0,0), From_Angle);
-            cout<<Position.x<<' '<<Position.y<<' '<<Position.z<<endl;
+            //cout<<Position.x<<' '<<Position.y<<' '<<Position.z<<endl;
 
  for(int i=0; i<planet.Moon_Number;i++)
  {
- Orbit_Moon(planet.moons[i],dt ,test);
+ Orbit_Moon(planet.moons[i],dt ,test,scale);
  }
 }
-void Orbit_Moon(Satilite&moon, float dt , glm::mat4 transist)
+void Orbit_Moon(Satilite&moon, float dt , glm::mat4 transist,glm::mat4 scale)
 {
 static float angle = 0.0;
 
 angle += dt * M_PI/2;
 
 
-	 transist*=glm::scale( glm::mat4(1.0f), glm::vec3(moon.scale, moon.scale, moon.scale));
 	 transist*=glm::translate( glm::mat4(1.0f), glm::vec3( moon.distance*sin(angle*2), .1, moon.distance*cos(angle*2)));
     moon.Model =transist;
     moon.Model *=glm::rotate(glm::mat4(1.0f),angle*2, glm::vec3(0.0, 1.0, 0.0 ));
+    moon.Model*=scale*glm::scale( glm::mat4(1.0f), glm::vec3(moon.scale, moon.scale, moon.scale));
+
+}
+
+
+void LoadSystem(char* name)
+{
+ fstream fin;
+ string a;
+ int z,x;
+ z=0;
+ x=0;
+ fin.open(name);
+ System[1].moons[1].scale=5;
+ do
+ {
+ LoadObject(fin,System[x].Data);
+ fin>>a;
+ fin>>a;
+ 
+ if(a=="no")
+ {
+   fin>>a;
+   fin>>z;
+
+   for(int i=0;i<z;i++)
+   {
+     LoadObject(fin,System[x].moons[i]);
+   }
+  
+ }
+ x+=1;
+//  LoadObject(fin,System[0].Data);
+ }while( fin.good()); 
+ cout<<System[1].moons[1].scale;
+}
+void LoadObject(fstream &fin, Satilite& Data)
+{
+	string a;
+	fin>>a;
+	if(fin.good())
+	{
+	fin>>a;
+	fin>>a;
+	
+	fin>>Data.index;
+	fin>>a;
+	fin>>Data.distance;
+	fin>>a;
+	fin>>Data.rotation;
+	fin>>a;
+	fin>>Data.orbit_speed;
+	fin>>a;
+	fin>>Data.scale;
+	}
+	
 
 }
