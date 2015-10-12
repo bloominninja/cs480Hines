@@ -17,6 +17,7 @@ using namespace std;
 #include "shader.cpp"
 #include <assimp/postprocess.h>
 #include <assimp/color4.h>
+#include <queue>
 //#include "planet.h"
 
 //--Data types
@@ -48,6 +49,7 @@ struct Satilite
 struct Planet
 {
 	Satilite Data;
+	bool focus;
 	int Moon_Number;
 	Satilite* moons=new Satilite[5];
 };
@@ -73,24 +75,30 @@ GLint loc_color;
 
 //Number of models in system
 int total=0;
+int NUM_PLAN=0;
+int SunScale=3;
 //maximum number of allowed models
-const int maxi = 10;
+const int maxi = 30;
 
 Planet earth;
-Planet System[10];
+Planet System[maxi];
 //transform matrices
-glm::mat4 model[maxi];//obj->world each object should have its own model matrix
+glm::mat4 SUN;//obj->world each object should have its own model matrix
 glm::mat4 view;//world->eye
 glm::mat4 projection;//eye->clip
 glm::mat4 mvp[maxi];//premultiplied modelviewprojection
 glm::mat4 hold;
 
 //Camera Controlls
-glm::vec3 Position= glm::vec3 (0.0, 8.0, -16.0);
+glm::vec3 Position= glm::vec3 (0.0, 16.0, -32.0);
 glm::vec3 From_Pos= glm::vec3 (0.0, 0.0, 0.0);
 glm::vec3 Look_At = glm::vec3(0.0, 0.0, 0.0);
 glm::vec3 From_Angle= glm::vec3(0.0, 1.0, 0.0);
 bool finished=false;
+
+queue <glm::vec3> jumpto;
+//jumpto.push(Position);
+
 
 
 //Glut Menu Static vals
@@ -99,7 +107,7 @@ static int submenu_id;
 
 //Global String for planet rotation
 //const char* GL_STR="test";
-    
+int pacing=1;   
 bool spin=true;
 bool rotate1=true;
 bool flip=true;
@@ -107,7 +115,7 @@ bool flip=true;
 void render();
 void update();
 void UpdateCamera(float,float,float,float);
-bool Operate(float&val, float stable, float dt,float scale);
+int Operate(float&val, float stable, float dt,float scale);
 void reshape(int n_w, int n_h);
 void keyboard(unsigned char key, int x_pos, int y_pos);
 void mouse(int button, int state,int x, int y);
@@ -116,10 +124,10 @@ void special(int key, int x, int y);
 void addModel(int geometryIndex,int& modelIndex, glm::mat4& set);
 
 bool loadOBJ( const char * path,std::vector < Vertex > & out_vertices);
-void Orbit_Planet(Planet&planet, float dt);
+void Orbit_Planet(Planet&planet, float dt,int scale);
 void Orbit_Moon(Satilite&moon, float dt, glm::mat4 transist, glm::mat4 scale);
-void LoadSystem(char* name);
-void LoadObject(fstream &pointer, Satilite& Data);
+void LoadSystem(const char* name);
+bool LoadObject(fstream &pointer, Satilite& Data);
 
 //void printtext(int x, int y, string String); 
 
@@ -139,6 +147,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
 //--Main
 int main(int argc, char **argv)
     {
+
     // Variable declaration
         // File path variable
     char argument[128]="";
@@ -158,7 +167,9 @@ int main(int argc, char **argv)
         }
     
     fin.close();
-    
+
+//Set Camera start
+    jumpto.push(Position);
     // Initialize GLUT.
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
@@ -207,14 +218,21 @@ void render()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	 
     //premultiply the matrix for each with addModel
-    addModel(1,ind,earth.Data.Model);
-    addModel(1,ind,earth.moons[0].Model);
-     addModel(1,ind,model[0]);
-    earth.Data.distance=5.0;
+    for(int i=0; i<NUM_PLAN;i++)
+    	{
+    	 addModel(1,ind,System[i].Data.Model);
+    	 for(int j=0; j<System[i].Moon_Number;j++)
+    	 {
+   	 addModel(1,ind,System[i].moons[j].Model);
+
+   	 }
+   	}
+     addModel(1,ind,SUN);
+   /* earth.Data.distance=5.0;
     earth.Data.scale=1;
     earth.Moon_Number=1;
     earth.moons[0].scale=.5;
-    earth.moons[0].distance=10;
+    earth.moons[0].distance=10;*/
 
 
     //clean up
@@ -235,67 +253,18 @@ void render()
 
 void update()
 {
-    //total time
-    //Set rotational and translate angles to 0
-    static float tangle = 0.0;
-    static float rangle = 0.0;
-    static float mtangle = 0.0;
-    static float mrangle = 0.0;
-	 static float sam=0.6;
+
     float dt = getDT();// if you have anything moving, use dt.
-    float x_point;
-    float y_point;
-    float z_point;
-    //Check for interrupt booleans
-    if (rotate1)
-	{
-    	tangle += dt * M_PI/2;
-mtangle += dt * M_PI;
 
-	}
-    else
-	{
-	tangle -= dt * M_PI/2;
-mtangle += dt * M_PI;
-	}
 
-    if (flip&&spin)
-	{
-//GL_STR="Planet is rotating counter clockwise";
-	rangle += dt * M_PI/2;
-mrangle += dt * M_PI;
-	}
-    else if(!flip&&spin)
-	{
-//GL_STR="Planet is rotating clockwise";
-	rangle -= dt * M_PI/2;
-mrangle += dt * M_PI;
-	}
-	else if(!spin)
-	{
-//GL_STR="Planet is not rotating";
-
-}
-    //Set degrees to arbitrary points
-    x_point=5.0 * sin(tangle);
-    y_point=.1;
-    z_point=5.0 * cos(tangle); //move through 90 degrees a second
-
-if (spin)
-{
-//hold=glm::rotate(glm::mat4(1.0f),rangle, glm::vec3(0.0, 1.0, 0.0 ));
-//
-}
-else
-{
-//hold=hold;
-
-}
 glm::mat4 test;
+SUN=glm::scale( glm::mat4(1.0f), glm::vec3(SunScale,SunScale,SunScale));
+for(int i=0;i<NUM_PLAN;i++)
+{
+Orbit_Planet(System[i],dt, SunScale);
+}
 
-
-Orbit_Planet(earth,dt);
-    test = glm::translate( glm::mat4(1.0f), glm::vec3(x_point, y_point, z_point));
+//    test = glm::translate( glm::mat4(1.0f), glm::vec3(x_point, y_point, z_point));
 	
 //    earth.Data.Model=test;
  //   earth.Data.Model*=glm::rotate(glm::mat4(1.0f),rangle, glm::vec3(0.0, 1.0, 0.0 ));
@@ -354,7 +323,7 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
     }
     if(key == 97)//A to rotate
     {
-        rotate1=!rotate1;
+        System[0].focus=true;
     }
 
 
@@ -392,7 +361,6 @@ std::vector< Vertex > vertices;
     char* pass;
     // Load the specified model.
     loadOBJ(arg,vertices);
-
 
     //this defines a cube, this is why a model loader is nice
     //you can also do this with a draw elements and indices, try to get that working
@@ -444,7 +412,7 @@ std::vector< Vertex > vertices;
                           {{-1.0, 1.0, 1.0}, {0.0, 0.0}},
                           {{1.0, -1.0, 1.0}, {0.0, 0.0}}
                         };
-                                LoadSystem("t.txt");
+                                
                                    
     // Create a Vertex Buffer object to store this vertex info on the GPU
     glGenBuffers(1, &Geo[1].vbo_geometry);
@@ -455,7 +423,7 @@ std::vector< Vertex > vertices;
    glBindBuffer(GL_ARRAY_BUFFER, Geo[2].vbo_geometry);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices.front(), GL_STATIC_DRAW);
 
-
+LoadSystem("sys.txt");
 // test
 ////test over
 
@@ -735,31 +703,44 @@ bool loadOBJ(const char * path,std::vector < Vertex > & out_vertices)
     }
 void UpdateCamera(float dt, float xMod, float yMod, float zMod)
 	{
-
-	if(!finished)
+	glm::vec3 Pos=jumpto.front();
+//jumpto.front(glm::vec3 (0.0, 8.0, -16.0));
+	 //check=test.front();
+	 
+	if(jumpto.empty()==0)
 	 {
-		if(Operate(From_Pos.y, Position.y, dt, 1),Operate(From_Pos.y, Position.y, dt, 1),
-		Operate(From_Pos.z, Position.z, dt, .5))
+	  
+		if(Operate(From_Pos.y, Pos.y, dt, 1)+Operate(From_Pos.x, Pos.x, dt, 1)+
+		Operate(From_Pos.z, Pos.z, dt, 1)==0)
 		{
-		 finished=true;
+
+		 jumpto.pop();
+		 if(jumpto.size()>2)
+		 {
+		 jumpto.pop();
+		 jumpto.pop();
+		 }
+		 
 		}
+
 	 }
-	 if(finished)
+	 if(jumpto.empty()!=0)
 	 {
 	  From_Pos=Position;
+
 	 }
 
 	    view = glm::lookAt( From_Pos,Look_At, From_Angle); 
 	}
 	
-bool Operate(float&val,float stable,float dt, float scale)
+int Operate(float&val,float stable,float dt, float scale)
 {
  		if(stable<0)
 			{
-			 if(val<stable+.1)
+			 if(val<stable+5)
 			 {
 			 	val=stable;
-			 	return true;
+			 	return 0;
 			 }
 			 if(val>stable)
 				 {
@@ -772,10 +753,10 @@ bool Operate(float&val,float stable,float dt, float scale)
 			}
 		else
 			{
-			if(val>stable-.1)
+			if(val>stable-5)
 			 {
 			 	val=stable;
-			 	return true;
+			 	return 0;
 			 }
 			 if(val>stable&&val>stable+1)
 				 {
@@ -786,11 +767,11 @@ bool Operate(float&val,float stable,float dt, float scale)
 				  val+=stable*dt*scale;
 				 }
 			}	
-			return false;
+			return 1;
 	
 }
 
-void Orbit_Planet(Planet& planet, float dt)
+void Orbit_Planet(Planet& planet, float dt, int sun)
 {
 glm::mat4 test;
 glm::mat4 cam;
@@ -803,25 +784,36 @@ static float tangle = 0.0;
 tangle += dt * M_PI/2;
 
 
-x_point=planet.Data.distance * sin(tangle);
+x_point=planet.Data.distance * sin(tangle*planet.Data.orbit_speed);
 y_point=.1;
-z_point=planet.Data.distance * cos(tangle);
+z_point=planet.Data.distance * cos(tangle*planet.Data.orbit_speed);
 
 //Orbit_Planet(earth,dt);
 
     test = glm::translate( glm::mat4(1.0f), glm::vec3(x_point, y_point, z_point));
+     scale=glm::scale( glm::mat4(1.0f), glm::vec3(sun,sun, sun));
+ scale*=glm::scale( glm::mat4(1.0f), glm::vec3(planet.Data.scale, planet.Data.scale, planet.Data.scale));
     
-	 cam=glm::translate( glm::mat4(1.0f), glm::vec3(x_point, y_point, z_point))* glm::translate( glm::mat4(1.0f), glm::vec3(x_point*2, y_point, 2*z_point));
+	 cam=glm::translate( glm::mat4(1.0f), glm::vec3(x_point, y_point, z_point))*scale* glm::translate( glm::mat4(1.0f), glm::vec3(x_point*1, y_point+2.8, 1*z_point));
+	 
+	 
+	 
+	 
     planet.Data.Model=test;
     //earth.Data.Model*=glm::rotate(glm::mat4(1.0f),angle, glm::vec3(0.0, 1.0, 0.0 ));
 
- planet.Data.Model*=glm::rotate(glm::mat4(1.0f),tangle, glm::vec3(0.0, 1.0, 0.0 ));
- scale=glm::scale( glm::mat4(1.0f), glm::vec3(planet.Data.scale, planet.Data.scale, planet.Data.scale));
+ planet.Data.Model*=glm::rotate(glm::mat4(1.0f),tangle*planet.Data.rotation, glm::vec3(0.0, 1.0, 0.0 ));
+
  planet.Data.Model*=scale;
+ if (planet.focus)
+ {
+  //jumpto.push(glm::vec3(cam[3].x,cam[3].y,cam[3].z));
+  Position=glm::vec3(cam[3].x,cam[3].y,cam[3].z);
+ }
  //test*=glm::scale( glm::mat4(1.0f), glm::vec3(planet.Data.scale, planet.Data.scale, planet.Data.scale));
   //cam*=glm::rotate(glm::mat4(1.0f),tangle, glm::vec3(0, 0, 1 ));  
 
-  //          view = glm::lookAt(glm::vec3(cam[3].x,cam[3].y+7,cam[3].z) ,glm::vec3(0,0,0), From_Angle);
+            //view = glm::lookAt(glm::vec3(cam[3].x,cam[3].y+7,cam[3].z) ,glm::vec3(0,0,0), From_Angle);
             //cout<<Position.x<<' '<<Position.y<<' '<<Position.z<<endl;
 
  for(int i=0; i<planet.Moon_Number;i++)
@@ -836,64 +828,76 @@ static float angle = 0.0;
 angle += dt * M_PI/2;
 
 
-	 transist*=glm::translate( glm::mat4(1.0f), glm::vec3( moon.distance*sin(angle*2), .1, moon.distance*cos(angle*2)));
+	 transist*=glm::translate( glm::mat4(1.0f), glm::vec3( moon.distance*sin(angle*moon.orbit_speed), .1, moon.distance*cos(angle*moon.orbit_speed)));
     moon.Model =transist;
-    moon.Model *=glm::rotate(glm::mat4(1.0f),angle*2, glm::vec3(0.0, 1.0, 0.0 ));
+    moon.Model *=glm::rotate(glm::mat4(1.0f),angle*moon.rotation, glm::vec3(0.0, 1.0, 0.0 ));
     moon.Model*=scale*glm::scale( glm::mat4(1.0f), glm::vec3(moon.scale, moon.scale, moon.scale));
 
 }
 
 
-void LoadSystem(char* name)
+void LoadSystem(const char* name)
 {
  fstream fin;
  string a;
- int z,x;
- z=0;
- x=0;
- fin.open(name);
- System[1].moons[1].scale=5;
- do
- {
- LoadObject(fin,System[x].Data);
- fin>>a;
- fin>>a;
- 
- if(a=="no")
- {
-   fin>>a;
-   fin>>z;
 
-   for(int i=0;i<z;i++)
-   {
-     LoadObject(fin,System[x].moons[i]);
-   }
-  
- }
- x+=1;
-//  LoadObject(fin,System[0].Data);
- }while( fin.good()); 
- cout<<System[1].moons[1].scale;
+ fin.open(name);
+ while(LoadObject(fin,System[NUM_PLAN].Data)&&fin.good())
+  		{
+  		System[NUM_PLAN].focus=false;
+ 		 fin>>a;
+ 		 fin>>a;
+ 		 if(a=="no")
+ 		  {
+   		fin>>a;
+ 		  	fin>>System[NUM_PLAN].Moon_Number;
+
+   		for(int i=0;i<System[NUM_PLAN].Moon_Number;i++)
+   			{
+   			
+    	 		LoadObject(fin,System[NUM_PLAN].moons[i]);
+   			}
+  		  }
+		NUM_PLAN+=1;
+  		}  
+	
+	
+   
+
 }
-void LoadObject(fstream &fin, Satilite& Data)
+bool LoadObject(fstream &fin, Satilite& Data)
 {
 	string a;
+	cout<<endl;
 	fin>>a;
-	if(fin.good())
+	cout<<a<<endl;
+	//cout<<a;
+	if(a!="end")
 	{
 	fin>>a;
-	fin>>a;
 	
-	fin>>Data.index;
 	fin>>a;
+
+	fin>>Data.index;
+	//cout<<Data.index<<endl;
+	fin>>a;
+
 	fin>>Data.distance;
 	fin>>a;
+
 	fin>>Data.rotation;
 	fin>>a;
+
 	fin>>Data.orbit_speed;
 	fin>>a;
 	fin>>Data.scale;
+	cout<<Data.index <<' '<<Data.distance <<' '<<Data.rotation <<' '<<Data.orbit_speed<<' '<<Data.scale;
+	return true;
 	}
-	
-
+	else
+	{
+	return false;
+	}
 }
+
+
