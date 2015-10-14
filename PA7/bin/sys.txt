@@ -1,0 +1,95 @@
+Name: Mercury
+Object: 1
+Distance: 5.7
+Rotation: .06
+Orbit_speed: .04
+Scale: .0035
+Has_Rings: no
+Num_Moons: 0
+
+Name: Venus
+Object: 1
+Distance: 10.8
+Rotation: -.0014
+Orbit_speed: .016
+Scale: .0087
+Has_Rings: no
+Num_Moons: 0
+
+Name: Earth
+Object: 1
+Distance: 14.9
+Rotation: .0365
+Orbit_speed: .01
+Scale: .0092
+Has_Rings: no
+Num_Moons: 1
+
+Name: Luna
+Object: 1
+Distance: .3
+Rotation: 2.16
+Orbit_speed: 2.16
+Scale: .27
+
+Name: Mars
+Object: 1
+Distance: 22.7
+Rotation: .01
+Orbit_speed: .0053
+Scale: .0049
+Has_Rings: no
+Num_Moons: 0
+
+Name: Jupiter
+Object: 1
+Distance: 77.8
+Rotation: .0876
+Orbit_speed: .0008
+Scale: .1004
+Has_Rings: no
+Num_Moons: 1
+
+Name: Callisto
+Object: 1
+Distance: 1
+Rotation: 2.05
+Orbit_speed: 2.05
+Scale: .06
+
+Name: Saturn
+Object: 1
+Distance: 142.4
+Rotation: .0876
+Orbit_speed: .0003
+Scale: .0837
+Has_Rings: no
+Num_Moons: 0
+
+Name: Uranus
+Object: 1
+Distance: 287.3
+Rotation: .00012
+Orbit_speed: .00012
+Scale: .0364
+Has_Rings: no
+Num_Moons: 0
+
+Name: Neptune
+Object: 1
+Distance: 450.1
+Rotation: .024
+Orbit_speed: .007
+Scale: .0354
+Has_Rings: no
+Num_Moons: 0
+
+Name: Pluto
+Object: 1
+Distance: 594.6
+Rotation: .0060
+Orbit_speed: .00004
+Scale: .0017
+Has_Rings: no
+Num_Moons: 0
+end
