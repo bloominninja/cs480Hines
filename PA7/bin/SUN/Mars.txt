@@ -1,6 +1,0 @@
-name: MARS
-Texture_Loc: FILE
-Mesh: Sphere
-Rotation: 1
-Rings: NO
-Moons: NULL
