@@ -1,6 +1,10 @@
 Solar System
 ========================================
 
+Developed By: Bryan Hines, Greg Staynor
+Version 1.0
+
+
 Building This Example
 ---------------------
 
