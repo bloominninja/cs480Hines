@@ -1,0 +1,2 @@
+body->setLinearFactor(btVector3(1,0,1));
+body->setAngularFactor(btVector3(0,1,0));
